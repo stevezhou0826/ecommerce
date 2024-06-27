@@ -183,6 +183,52 @@ app.get("/allproducts", async (req, res) => {
   res.json(products);
 });
 
+// creating endpoint for newcollection data
+app.get("/newcollections", async (req, res) => {
+  let products = await Product.find({});
+  let newcollection = products.slice(1).slice(-8);
+  console.log("new collection fetched");
+  res.send(newcollection);
+});
+
+// creating endpoint for popular in women section
+app.get("/popularinwomen", async (req, res) => {
+  let products = await Product.find({ category: "women" });
+  let popular_in_women = products.slice(0, 4);
+  console.log("popular in women fetched");
+  res.send(popular_in_women);
+});
+
+// creating middleware to fetch user
+const fetchUser = async (req, res, next) => {
+  const token = req.header("auth-token");
+  if (!token) {
+    res.status(401).send({ errors: "please authenticate using valid token" });
+  } else {
+    try {
+      const data = jwt.verify(token, "secret_ecom");
+      req.user = data.user;
+      next();
+    } catch (error) {
+      res
+        .status(401)
+        .send({ errors: "please authenticate using a valid token" });
+    }
+  }
+};
+
+// creating endpoint for adding products in cartdata
+app.post("/addtocart", fetchUser, async (req, res) => {
+  console.log(req.user);
+  let userData = await Users.findOne({ _id: req.user.id });
+  userData.cartData[req.body.itemId] += 1;
+  await Users.findOneAndUpdate(
+    { _id: req.user.id },
+    { cartData: userData.cartData }
+  );
+  res.send("added to cart success");
+});
+
 app.listen(port, (error) => {
   if (!error) {
     console.log("Server Running on Port: " + port);
@@ -203,11 +249,11 @@ app.post("/login", async (req, res) => {
         },
       };
       const token = jwt.sign(data, "secret_ecom");
-      res.json({ sucess: true, token });
+      res.json({ success: true, token });
     } else {
-      res.json({ sucess: false, errors: "wrong password" });
+      res.json({ success: false, errors: "wrong password" });
     }
   } else {
-    res.json({ sucess: false, errors: "wrong email id" });
+    res.json({ success: false, errors: "wrong email id" });
   }
 });
